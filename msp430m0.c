@@ -15,7 +15,7 @@ uint32_t read32 ( uint32_t );
 uint32_t read_register ( uint32_t );
 
 #define ROMADDMASK 0x7fffL /* 32k */
-#define RAMADDMASK 0x7fffL /* 16k */
+#define RAMADDMASK 0x7fffL /* 32k */
 
 #define ROMSIZE (ROMADDMASK+1)
 #define RAMSIZE (RAMADDMASK+1)

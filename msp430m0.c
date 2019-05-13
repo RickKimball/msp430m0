@@ -1,5 +1,5 @@
 //--------------------------------------------------------------------------
-// msp430m0.c - turn an fast msp430fr6989 into a slow msp430m0 w/thumbulator
+// msp430m0.c - turn a fast msp430fr6989 into a slow msp430m0 w/thumbulator
 /*--------------------------------------------------------------------------
    based on: https://github.com/dwelch67/thumbulator
    see copyright at bottom of file

@@ -38,6 +38,10 @@ newblinky: mspdebug
 		 -ex 'quit' \
 		 $(TARGET).elf
 
+debug: mspdebug
+	msp430-elf-gdb -ex 'target remote :2000' \
+		 -ex 'mon reset' \
+		 $(TARGET).elf
 
 # vim: set ts=4 sw=4 noexpandtab :
 

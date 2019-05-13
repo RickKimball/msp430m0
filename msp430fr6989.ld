@@ -40,18 +40,18 @@ ENTRY(_start)
 MEMORY {
   TINYRAM          : ORIGIN = 0x0006, LENGTH = 0x001A
   BSL              : ORIGIN = 0x1000, LENGTH = 0x0800
-  /* RAM              : ORIGIN = 0x1C00, LENGTH = 0x0800 /* END=0x23FF, size 2048 */
+  RAM              : ORIGIN = 0x1C00, LENGTH = 0x0800 /* END=0x23FF, size 2048 */
   INFOMEM          : ORIGIN = 0x1800, LENGTH = 0x0200 /* END=0x19FF, size 512 as 4 128-byte segments */
   INFOA            : ORIGIN = 0x1980, LENGTH = 0x0080 /* END=0x19FF, size 128 */
   INFOB            : ORIGIN = 0x1900, LENGTH = 0x0080 /* END=0x197F, size 128 */
   INFOC            : ORIGIN = 0x1880, LENGTH = 0x0080 /* END=0x18FF, size 128 */
   INFOD            : ORIGIN = 0x1800, LENGTH = 0x0080 /* END=0x187F, size 128 */
 
-  RAM              : ORIGIN = 0x4400, LENGTH = 0x2880
-  ROM (rx)         : ORIGIN = 0x4400+0x2880, LENGTH = 0xBB80-0x2880 /* END=0xFF7F, size 48000 */
+  ROM (rx)         : ORIGIN = 0x4400, LENGTH = 0xBB80 /* END=0xFF7F, size 48000 */
   M0ROM (rx)       : ORIGIN = 0x00010000,               LENGTH = 0x8000 /* 32k */
   M0RAM            : ORIGIN = 0x00010000+0x8000,        LENGTH = 0x8000 /* 32k */
   HIFRAM (rxw)     : ORIGIN = 0x00010000+0x8000+0x8000, LENGTH = 0x00013FFF-0x8000-0x8000
+
   JTAGSIGNATURE    : ORIGIN = 0xFF80, LENGTH = 0x0004
   BSLSIGNATURE     : ORIGIN = 0xFF84, LENGTH = 0x0004
   IPESIGNATURE     : ORIGIN = 0xFF88, LENGTH = 0x0008
@@ -241,12 +241,12 @@ SECTIONS
     KEEP (*(.dtors))
   } > ROM
 
-  .m0ram.bss :
+  .m0ram.bss (NOLOAD) :
   { 
     *.bss
   } > M0RAM
 
-  .m0rom.bss :
+  .m0rom.bss (NOLOAD) :
   {
     *.bss
   } > M0ROM

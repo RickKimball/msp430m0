@@ -1,12 +1,12 @@
+TARGET 		?= msp430m0
+OPT 		?= -O2
+TARGET_ARCH	?= -mmcu=msp430fr6989 -mlarge
+M0_FIRMWARE ?= blinky/firmware.hex
 
-TARGET ?= msp430m0
-OPT ?= -O2
-TARGET_ARCH	= -mmcu=msp430fr6989 -mlarge
 CFLAGS	= -Wall -g $(OPT) -Wno-misleading-indentation
 LDFLAGS = -L. -T./msp430fr6989.ld -Wl,--gc-sections -Wl,-Map=$(TARGET).map
 
-
-.PHONY: all clean mspdebug install
+.PHONY: all clean mspdebug install m0install
 
 all:	$(TARGET).elf
 	@msp430-elf-nm -S -n $< 2>/dev/null | grep ' ram'
@@ -26,14 +26,14 @@ mspdebug:
 install: mspdebug
 	msp430-elf-gdb -ex 'target remote :2000' \
 		 -ex 'load' \
-		 -ex 'restore blinky/firmware.hex' \
+		 -ex 'restore $(M0_FIRMWARE)' \
 		 -ex 'mon reset run' \
 		 -ex 'quit' \
 		 $(TARGET).elf
 
-newblinky: mspdebug
+m0install: mspdebug
 	msp430-elf-gdb -ex 'target remote :2000' \
-		 -ex 'restore blinky/firmware.hex' \
+		 -ex 'restore $(M0_FIRMWARE)' \
 		 -ex 'mon reset run' \
 		 -ex 'quit' \
 		 $(TARGET).elf

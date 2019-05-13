@@ -52,8 +52,6 @@ uint32_t reads;
 uint32_t writes;
 uint32_t systick_ints;
 
-
-
 //-------------------------------------------------------------------
 void dump_counters ( void )
 {
@@ -116,6 +114,7 @@ uint32_t fetch32 ( uint32_t addr )
     }
     while(1); //fprintf(stderr,"fetch32(0x%08lX), abort pc 0x%04lX\n",addr,read_register(15));
 }
+
 //-------------------------------------------------------------------
 void write16 ( uint32_t addr, uint32_t data )
 {
@@ -133,6 +132,7 @@ void write16 ( uint32_t addr, uint32_t data )
     }
     while(1); // fprintf(stderr,"write16(0x%08lX,0x%04lX), abort pc 0x%04lX\n",addr,data,read_register(15));
 }
+
 //-------------------------------------------------------------------
 void write32 ( uint32_t addr, uint32_t data )
 {
@@ -141,7 +141,7 @@ void write32 ( uint32_t addr, uint32_t data )
         dump_counters();
         exit(0);
 
-    case 0xE0000000: //periph
+    case 0xE0000000: // periph
         if ( 0 )
             ;
         else if ( addr == 0xE000E010L ) {
@@ -187,7 +187,7 @@ void write32 ( uint32_t addr, uint32_t data )
         }
  #endif
 
-    case 0x20000000: //RAM
+    case 0x20000000: // RAM
         write16(addr+0,(data>> 0)&0xFFFF);
         write16(addr+2,(data>>16)&0xFFFF);
         return;
@@ -195,19 +195,36 @@ void write32 ( uint32_t addr, uint32_t data )
     case 0x40000000:  // peripherals
         if ( 0 )
             ;
-        else if ( addr == 0x40001004L ) {
-            uint8_t t = data & 0xffff;
-            PAOUT = t;
+        else if ( addr == 0x40001000UL ) {  // IDR
             return;
         }
-        else if ( addr == 0x40001008L ) {
-            uint8_t t = data & 0xffff;
-            PADIR = t;
+        else if ( addr == 0x40001004UL ) {  // ODR
+            uint8_t set = data & 0xff;
+            P1OUT = set;
+            return;
+        }
+        else if ( addr == 0x40001008UL ) { // MODER
+            uint8_t set = data & 0xff;
+            P1DIR = set;
+            return;
+        }
+        else if ( addr == 0x4000100CUL ) { // BSRR 16 bit 8..15 clr / 0..8 set
+            uint8_t clr = (data >> 8) & 0xff;
+            uint8_t set = data & 0xff;
+            
+            P1OUT = (P1OUT & clr) | set;
+            return;
+        }
+        else if ( addr == 0x40001010UL ) { // TOGGLER 8 bit
+            uint8_t set = data & 0xff;
+            P1OUT ^= set;
             return;
         }
     }
+
     while(1); //fprintf(stderr,"write32(0x%08lX,0x%08lX), abort pc 0x%04lX\n",addr,data,read_register(15));
 }
+
 //-----------------------------------------------------------------
 uint32_t read16 ( uint32_t addr )
 {
@@ -230,6 +247,7 @@ uint32_t read16 ( uint32_t addr )
     }
     while(1); //fprintf(stderr,"read16(0x%08lX), abort pc 0x%04lX\n",addr,read_register(15));
 }
+
 //-------------------------------------------------------------------
 uint32_t read32 ( uint32_t addr )
 {
@@ -248,13 +266,23 @@ uint32_t read32 ( uint32_t addr )
         case 0x40000000:  // peripherals
             if ( 0 )
                 ;
-            else if ( addr == 0x40001004UL ) {
-                data = PAOUT;
-                return(data);
+            else if ( addr == 0x40001000UL ) { // IDR  8 bits
+                data = P1IN;
+                return data;
             }
-            else if ( addr == 0x40001008UL ) {
-                data = PADIR;
-                return(data);
+            else if ( addr == 0x40001004UL ) { // ODR  8 bits
+                data = P1OUT;
+                return data;
+            }
+            else if ( addr == 0x40001008UL ) { // MODER 8 bits 
+                data = P1DIR;
+                return data;
+            }
+            else if ( addr == 0x4000100CUL ) { // BSRR  - write only
+                return 0;
+            }
+            else if ( addr == 0x40001010UL ) { // TOGGLER - write only
+                return 0;
             }
             break;
 
@@ -289,6 +317,7 @@ uint32_t read32 ( uint32_t addr )
     }
     while(1); // fprintf(stderr,"read32(0x%08lX), abort pc 0x%04lX\n",addr,read_register(15));
 }
+
 //-------------------------------------------------------------------
 uint32_t read_register ( uint32_t reg )
 {
@@ -306,6 +335,7 @@ uint32_t read_register ( uint32_t reg )
     }
     return(data);
 }
+
 //-------------------------------------------------------------------
 void write_register ( uint32_t reg, uint32_t data )
 {
@@ -327,16 +357,19 @@ if(output_vcd)
 #endif
 
 }
+
 //-------------------------------------------------------------------
 void do_zflag ( uint32_t x )
 {
     if(x==0) cpsr|=CPSR_Z; else cpsr&=~CPSR_Z;
 }
+
 //-------------------------------------------------------------------
 void do_nflag ( uint32_t x )
 {
     if(x&0x80000000) cpsr|=CPSR_N; else cpsr&=~CPSR_N;
 }
+
 //-------------------------------------------------------------------
 void do_cflag ( uint32_t a, uint32_t b, uint32_t c )
 {
@@ -347,6 +380,7 @@ void do_cflag ( uint32_t a, uint32_t b, uint32_t c )
     rc = (rc>>31)+(a>>31)+(b>>31);  //carry out
     if(rc&2) cpsr|=CPSR_C;
 }
+
 //-------------------------------------------------------------------
 void do_vflag ( uint32_t a, uint32_t b, uint32_t c )
 {
@@ -361,16 +395,19 @@ void do_vflag ( uint32_t a, uint32_t b, uint32_t c )
     rc=(rc^rd)&1; //if carry in != carry out then signed overflow
     if(rc) cpsr|=CPSR_V;
 }
+
 //-------------------------------------------------------------------
 void do_cflag_bit ( uint32_t x )
 {
    if(x) cpsr|=CPSR_C; else cpsr&=~CPSR_C;
 }
+
 //-------------------------------------------------------------------
 void do_vflag_bit ( uint32_t x )
 {
    if(x) cpsr|=CPSR_V; else cpsr&=~CPSR_V;
 }
+
 //-------------------------------------------------------------------
 //-------------------------------------------------------------------
 //-------------------------------------------------------------------
@@ -1871,6 +1908,7 @@ int execute ( void )
     while(1); // fprintf(stderr,"invalid instruction 0x%08lX 0x%04lX\n",pc-4,inst);
     return(1);
 }
+
 //-------------------------------------------------------------------
 int reset ( void )
 {
@@ -1900,6 +1938,7 @@ int reset ( void )
 
     return(0);
 }
+
 //-------------------------------------------------------------------
 int run ( void )
 {
@@ -1915,6 +1954,7 @@ int run ( void )
     dump_counters();
     return(0);
 }
+
 //-------------------------------------------------------------------
 //-------------------------------------------------------------------
 int main ()
@@ -1933,6 +1973,7 @@ int main ()
     CSCTL3 = DIVA__1 | DIVS__1 | DIVM__1;     // Set all dividers
     CSCTL0_H = 0;                             // Lock CS registers
 
+#if 0
     PADIR |= 0xffff;
     PAOUT |= 0x1;
     unsigned n=4;
@@ -1943,7 +1984,6 @@ int main ()
         PAOUT ^= 0x1;
     } while(--n);
 
-#if 0 // use (gdb) restore firmware.hex
     memset(rom,0xFF,sizeof(rom)); 
 #endif
     memset(ram,0x00,sizeof(ram));

@@ -1,17 +1,16 @@
-# vim: set ts=4 sw=4 noexpandtab :
 
 ARMGNU = arm-none-eabi
 
 CPU 		?= cortex-m0
 OPT 		?= -O2
-M0ROM  		?= 0x10000
+M0ROM_ADDR 	?= 0x10000
 TARGET_ARCH ?= -mcpu=$(CPU) -mthumb
 TARGET		?= firmware
 
-CFLAGS  = -Wall -g $(OPT) $(TARGET_ARCH) -ffreestanding 
+CFLAGS  = -Wall -g $(OPT) $(TARGET_ARCH) -ffreestanding  -D_MSP430_M0_
 LDFLAGS = -nodefaultlibs -nostartfiles
 
-.PHONY: all clean clobber
+.PHONY: all clean clobber install
 
 all : $(TARGET).hex
 
@@ -26,7 +25,7 @@ $(TARGET).elf : vectors.o main.o msp430m0.ld
 
 $(TARGET).hex : $(TARGET).elf
 	$(ARMGNU)-objdump -CS $< > $(TARGET).list
-	$(ARMGNU)-objcopy --change-addresses=$(M0ROM) -O ihex $< $@
+	$(ARMGNU)-objcopy --change-addresses=$(M0ROM_ADDR) -O ihex $< $@
 	$(ARMGNU)-size $<
 
 clean:
@@ -39,3 +38,8 @@ clean:
 clobber: clean
 	rm -f *.hex
 
+install:
+	export M0_FIRMWARE=blinky/$(TARGET).hex; \
+	make -e -C .. m0install
+
+# vim: set ts=4 sw=4 noexpandtab :

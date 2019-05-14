@@ -1,0 +1,16 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "~/ti/ccs901/ccs/ccs_base/msp430/include_gcc"
+            ],
+            "defines": [],
+            "compilerPath": "~/ti/ccs901/ccs/tools/compiler/msp430-gcc-7.3.2.154_linux64/bin/msp430-elf-gcc -mmcu=msp430fr6989",
+            "cStandard": "c11",
+            "cppStandard": "c++17"
+        }
+    ],
+    "version": 4
+}

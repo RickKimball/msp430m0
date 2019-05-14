@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "*.re": "cpp",
+        "inttypes.h": "c"
+    }
+}

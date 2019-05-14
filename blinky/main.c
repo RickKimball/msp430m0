@@ -4,7 +4,7 @@
 #include <inttypes.h>
 
 #define BIT0 (1<<0)
-#define BIT3 (4<<0)
+#define BIT3 (1<<3)
 
 //------------------------------------------------------------------------
 // GPIO_Type - fake GPIO peripheral wired to 8 bit P1,P2,P3 ports
@@ -20,20 +20,21 @@ typedef struct {
 #define P1_BASE                 0x40001000
 #define P2_BASE                 (PERIPHERAL_BASE+0x2000)
 
-GPIO_Type * const P1 = (GPIO_Type * const)P1_BASE;
+#define PWM_BASE                0x40010000
 
-//------------------------------------------------------------------------
+GPIO_Type * const P1 = (GPIO_Type * const)P1_BASE;
 
 int main ( void )
 {
-  P1->MODER |= BIT0 | BIT3;     // P1.0 and P1.3 outputs
-  P1->BSRR = 0xff00;            // turn all pins off (8..15 clr) (0..7 set)
-  P1->BSRR = 0x0001;            // P1.0 on
+  P1->MODER = BIT0 | BIT3;      // P1.0 and P1.3 outputs
+  P1->BSRR = 0xff01;            // turn all pins off (8..15 clr)
+                                // turn on P1.0      (0..7 set)
 
   while(1) {
     P1->TOGGLER = BIT0 | BIT3;  // toggle P1.0 and P1.3
 
-    volatile unsigned x=1000; do{} while(--x); // delay
+    volatile unsigned x = 1590>>1;
+    do{} while(--x);            // delay
   }
 
   return(0);

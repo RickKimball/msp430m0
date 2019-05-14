@@ -11,6 +11,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define F_CPU 16095000L  /* measured */
+
 uint32_t read32 ( uint32_t );
 uint32_t read_register ( uint32_t );
 
@@ -134,6 +136,43 @@ void write16 ( uint32_t addr, uint32_t data )
 }
 
 //-------------------------------------------------------------------
+
+typedef struct {
+  volatile uint32_t CR;         // control register
+                                // 31 en, 30,29 mode, 8..16 port, 0..7 pin
+  volatile uint32_t PERIODR;    // period register
+  volatile uint32_t DUTYR;      // duty register 0..100
+} PWM_Type;
+
+PWM_Type PWM0;
+
+void __attribute__ ((interrupt(TIMER0_A0_VECTOR))) Timer0_A0_ISR (void)
+{
+    uint8_t _P1 = P1OUT;
+
+    if ( PWM0.DUTYR == 0) {
+        P1OUT = _P1 & ~BIT0;
+        TA0CCR0 += PWM0.PERIODR;
+        goto ISRExit;
+    }
+    else if ( PWM0.DUTYR >= PWM0.PERIODR ) {
+        P1OUT = _P1 | BIT0;
+        TA0CCR0 += PWM0.PERIODR;
+        goto ISRExit;
+    }
+    
+    if ( P1OUT & BIT0 ) {
+        TA0CCR0 += PWM0.PERIODR-PWM0.DUTYR;
+    }
+    else {
+        TA0CCR0 += PWM0.DUTYR;
+    }
+    P1OUT = _P1 ^ BIT0; // toggle it
+ISRExit:
+}
+ 
+
+//-------------------------------------------------------------------
 void write32 ( uint32_t addr, uint32_t data )
 {
     switch(addr&0xF0000000) {
@@ -187,37 +226,63 @@ void write32 ( uint32_t addr, uint32_t data )
         }
  #endif
 
-    case 0x20000000: // RAM
+    case 0x20000000UL: // RAM
         write16(addr+0,(data>> 0)&0xFFFF);
         write16(addr+2,(data>>16)&0xFFFF);
         return;
 
-    case 0x40000000:  // peripherals
+    case 0x40000000UL:  // peripherals
         if ( 0 )
             ;
-        else if ( addr == 0x40001000UL ) {  // IDR
+        else if ( addr == 0x40001000UL ) {  // GPIO IDR
             return;
         }
-        else if ( addr == 0x40001004UL ) {  // ODR
+        else if ( addr == 0x40001004UL ) {  // GPIO ODR
             uint8_t set = data & 0xff;
             P1OUT = set;
             return;
         }
-        else if ( addr == 0x40001008UL ) { // MODER
+        else if ( addr == 0x40001008UL ) { // GPIO MODER
             uint8_t set = data & 0xff;
             P1DIR = set;
             return;
         }
-        else if ( addr == 0x4000100CUL ) { // BSRR 16 bit 8..15 clr / 0..8 set
+        else if ( addr == 0x4000100CUL ) { // GPIO BSRR 16 bit 8..15 clr / 0..8 set
             uint8_t clr = (data >> 8) & 0xff;
             uint8_t set = data & 0xff;
             
-            P1OUT = (P1OUT & clr) | set;
+            P1OUT = (P1OUT & ~clr) | set;
             return;
         }
-        else if ( addr == 0x40001010UL ) { // TOGGLER 8 bit
+        else if ( addr == 0x40001010UL ) { // GPIO TOGGLER 8 bit
             uint8_t set = data & 0xff;
             P1OUT ^= set;
+            return;
+        }
+        else if ( addr == 0x40010000UL ) { // PWM CR
+            if ( data & ( 1L<<31) ) {
+                P1OUT |= (data & 0xff);
+                P1DIR |= (data & 0xff);
+            }
+            else {
+                P1OUT &= ~(data & 0xff);
+                P1DIR &= ~(data & 0xff);
+            }
+            return;
+        }
+        else if ( addr == 0x40010004UL ) { // PWM PERIOD
+            uint32_t T_PRE = (F_CPU / data / 65535L) + 1;
+            PWM0.PERIODR = (F_CPU / T_PRE / data);
+            PWM0.DUTYR = PWM0.PERIODR >> 1;
+
+            TA0CCTL0 = CCIE;
+            TA0CCR0 = PWM0.PERIODR;
+            TA0CTL = TASSEL__SMCLK | MC__CONTINOUS | TACLR;
+
+            return;
+        }
+        else if ( addr == 0x40010008UL ) { // PWM DUTY
+            PWM0.DUTYR = (PWM0.PERIODR * data * 10 ) / 1000UL;
             return;
         }
     }
@@ -266,24 +331,34 @@ uint32_t read32 ( uint32_t addr )
         case 0x40000000:  // peripherals
             if ( 0 )
                 ;
-            else if ( addr == 0x40001000UL ) { // IDR  8 bits
+            else if ( addr == 0x40001000UL ) { // GPIO P1 IDR  8 bits
                 data = P1IN;
                 return data;
             }
-            else if ( addr == 0x40001004UL ) { // ODR  8 bits
+            else if ( addr == 0x40001004UL ) { // GPIO P1 ODR  8 bits
                 data = P1OUT;
                 return data;
             }
-            else if ( addr == 0x40001008UL ) { // MODER 8 bits 
+            else if ( addr == 0x40001008UL ) { // GPIO P1 MODER 8 bits 
                 data = P1DIR;
                 return data;
             }
-            else if ( addr == 0x4000100CUL ) { // BSRR  - write only
+            else if ( addr == 0x4000100CUL ) { // GPIO P1 BSRR  - write only
                 return 0;
             }
-            else if ( addr == 0x40001010UL ) { // TOGGLER - write only
+            else if ( addr == 0x40001010UL ) { // GPIO P1 TOGGLER - write only
                 return 0;
             }
+            else if ( addr == 0x40010000UL ) { // PWM CR
+                return 0;
+            }
+            else if ( addr == 0x40010004UL ) { // PWM PERIOD
+                return 0;
+            }
+            else if ( addr == 0x40010008UL ) { // PWM DUTY
+                return 0;
+            }
+
             break;
 
         case 0xE0000000:
@@ -1974,6 +2049,14 @@ int main ()
     CSCTL0_H = 0;                             // Lock CS registers
 
 #if 0
+    P7DIR |= 1<<4;
+    P7SEL1 |= 1 << 4;
+    P7SEL0 |= 1 << 4;
+    // LCD_C_BASE  &= ~(1<<4);
+#endif
+    
+
+#if 0
     PADIR |= 0xffff;
     PAOUT |= 0x1;
     unsigned n=4;
@@ -1987,6 +2070,7 @@ int main ()
     memset(rom,0xFF,sizeof(rom)); 
 #endif
     memset(ram,0x00,sizeof(ram));
+    __enable_interrupt();
     run();
     return(0);
 }

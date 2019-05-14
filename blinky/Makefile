@@ -2,7 +2,7 @@
 ARMGNU = arm-none-eabi
 
 CPU 		?= cortex-m0
-OPT 		?= -O2
+OPT 		?= -Os
 M0ROM_ADDR 	?= 0x10000
 TARGET_ARCH ?= -mcpu=$(CPU) -mthumb
 TARGET		?= firmware
@@ -13,6 +13,7 @@ LDFLAGS = -nodefaultlibs -nostartfiles
 .PHONY: all clean clobber install
 
 all : $(TARGET).hex
+	$(ARMGNU)-size $(TARGET).elf
 
 vectors.o : vectors.s
 	$(ARMGNU)-as vectors.s -o vectors.o
@@ -26,7 +27,6 @@ $(TARGET).elf : vectors.o main.o msp430m0.ld
 $(TARGET).hex : $(TARGET).elf
 	$(ARMGNU)-objdump -CS $< > $(TARGET).list
 	$(ARMGNU)-objcopy --change-addresses=$(M0ROM_ADDR) -O ihex $< $@
-	$(ARMGNU)-size $<
 
 clean:
 	rm -f *.bin

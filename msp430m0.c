@@ -168,7 +168,9 @@ void __attribute__ ((interrupt(TIMER0_A0_VECTOR))) Timer0_A0_ISR (void)
         TA0CCR0 += PWM0.DUTYR;
     }
     P1OUT = _P1 ^ BIT0; // toggle it
+
 ISRExit:
+    asm("nop");
 }
  
 
